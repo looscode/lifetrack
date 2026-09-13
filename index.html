@@ -159,7 +159,6 @@
      layout with this player's seat filled in, rotated to match how it
      actually sits on screen. Stands in for a name without one. */
   .seat-glyph{ width:26px; height:24px; display:flex; flex-direction:column; gap:2px; flex:0 0 auto; }
-  .seat-glyph.rot180{ transform:rotate(180deg); }
   .seat-row{ flex:1; display:flex; gap:2px; }
   .seat-cell{ flex:1; border-radius:2px; background:#33363d; }
 
@@ -432,13 +431,15 @@
 
   // Mini seating-chart icon standing in for a name: a small replica of the
   // current player-count layout (same top/bottom split as the real board)
-  // with this player's seat filled in and rotated to match their actual
-  // orientation, so "which row is this" reads the same way the table does.
+  // with this player's seat filled in. The Menu itself is never rotated,
+  // so the glyph stays unrotated too — it shows physical seat position,
+  // not the 180°-rotated reading orientation a top-row player's own
+  // number gets on the real board.
   function buildSeatGlyph(pid){
     var n = state.players.length;
     var topCount = Math.ceil(n/2);
     var glyph = document.createElement('div');
-    glyph.className = 'seat-glyph' + (pid < topCount ? ' rot180' : '');
+    glyph.className = 'seat-glyph';
     var topRow = document.createElement('div');
     topRow.className = 'seat-row';
     var bottomRow = document.createElement('div');
