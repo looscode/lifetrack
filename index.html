@@ -225,9 +225,9 @@
 <script>
 (function(){
   var PALETTES = [
-    {name:'Sand', bg:'var(--sand-bg)', fg:'var(--sand-fg)'},
-    {name:'Tide', bg:'var(--tide-bg)', fg:'var(--tide-fg)'},
     {name:'Plum', bg:'var(--plum-bg)', fg:'var(--plum-fg)'},
+    {name:'Tide', bg:'var(--tide-bg)', fg:'var(--tide-fg)'},
+    {name:'Sand', bg:'var(--sand-bg)', fg:'var(--sand-fg)'},
     {name:'Rust', bg:'var(--rust-bg)', fg:'var(--rust-fg)'},
     {name:'Moss', bg:'var(--moss-bg)', fg:'var(--moss-fg)'},
     {name:'Slate', bg:'var(--slate-bg)', fg:'var(--slate-fg)'}
@@ -281,6 +281,19 @@
     gameEl.classList.remove('hidden');
     menuBtn.classList.remove('hidden');
     renderGame();
+    applyOrientationLock(state.playerCount);
+  }
+
+  // 2 players share a phone held between them, split top/bottom, so that
+  // stays portrait. 3+ sit around a table with the phone flat between them,
+  // so that's landscape. Locking prevents an accidental rotation from
+  // reshuffling which corner each player owns mid-game. Only takes effect
+  // in an installed/standalone PWA (and isn't supported on iOS Safari at
+  // all) — silently does nothing otherwise, which is fine.
+  function applyOrientationLock(count){
+    if (!screen.orientation || !screen.orientation.lock) return;
+    var mode = count === 2 ? 'portrait' : 'landscape';
+    screen.orientation.lock(mode).catch(function(){});
   }
 
   function renderGame(){
@@ -682,6 +695,7 @@
       gameEl.classList.add('hidden');
       menuBtn.classList.add('hidden');
       setupEl.classList.remove('hidden');
+      if (screen.orientation && screen.orientation.unlock) screen.orientation.unlock();
     });
     actions.appendChild(cancel);
     actions.appendChild(confirmBtn);
