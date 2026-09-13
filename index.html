@@ -79,17 +79,6 @@
   .tap-zone.flash-plus{ background:rgba(255,255,255,0.10); }
   .tap-zone.flash-minus{ background:rgba(0,0,0,0.12); }
 
-  .top-bar{
-    position:absolute; top:8px; left:0; right:0;
-    display:flex; align-items:center; justify-content:center; gap:6px;
-    pointer-events:auto; z-index:2;
-  }
-  .player-name{
-    text-align:center; font-size:13px; font-weight:600;
-    color:inherit; opacity:0.75; width:120px; padding:2px; font-family:inherit;
-    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
-  }
-
   .life-display{
     font-family:'SF Mono','Roboto Mono',Menlo,Consolas,monospace;
     font-variant-numeric:tabular-nums;
@@ -106,7 +95,7 @@
   .badge-cmd.danger{ color:#ffb4a3; opacity:1; }
   .badge-poison.danger{ color:#b9f0a0; opacity:1; }
 
-  .row.rot180 .cell-inner, .row.rot180 .top-bar, .row.rot180 .cell-badge{
+  .row.rot180 .cell-inner, .row.rot180 .cell-badge{
     transform: rotate(180deg);
   }
 
@@ -141,8 +130,8 @@
     color:#e7e5e0; font-family:inherit; text-align:left;
   }
   .menu-player-toggle:first-of-type{ margin-top:0; }
-  .menu-player-toggle .ptoggle-left{ display:flex; align-items:center; gap:8px; min-width:0; }
-  .menu-player-toggle .ptoggle-name{ font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .menu-player-toggle .ptoggle-left{ display:flex; align-items:center; gap:10px; min-width:0; }
+  .menu-player-toggle .ptoggle-name{ font-size:14px; font-weight:700; }
   .menu-player-toggle .ptoggle-summary{ font-size:12px; color:#9a9ea7; font-weight:600; }
   .menu-player-toggle .ptoggle-summary.danger{ color:#ff8a75; }
   .menu-player-toggle .chevron{
@@ -159,18 +148,21 @@
     background:#b2502e; color:#fff8f2; font-size:15px; font-weight:600; cursor:pointer;
     margin-top:20px;
   }
-  .name-edit-row{ padding:5px 0; }
-  .name-edit-input{
-    width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #2a2d34;
-    background:#111318; color:#e7e5e0; font-size:15px; font-family:inherit;
-  }
-  .name-edit-input:focus{ outline:none; border-color:#565b66; }
   .cmd-row{
     display:flex; align-items:center; justify-content:space-between; gap:12px;
     padding:10px 0; border-bottom:1px solid #24262d;
   }
   .cmd-row:last-child{ border-bottom:none; }
-  .cmd-row .opp-name{ font-size:15px; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .cmd-row .row-id{ display:flex; align-items:center; flex:1; }
+
+  /* mini seating-chart icon: a small replica of the current player-count
+     layout with this player's seat filled in, rotated to match how it
+     actually sits on screen. Stands in for a name without one. */
+  .seat-glyph{ width:26px; height:24px; display:flex; flex-direction:column; gap:2px; flex:0 0 auto; }
+  .seat-glyph.rot180{ transform:rotate(180deg); }
+  .seat-row{ flex:1; display:flex; gap:2px; }
+  .seat-cell{ flex:1; border-radius:2px; background:#33363d; }
+
   .stepper{ display:flex; align-items:center; gap:10px; }
   .stepper button{
     width:32px; height:32px; border-radius:8px; border:1.5px solid #33363d; background:#202227;
@@ -225,12 +217,12 @@
 <script>
 (function(){
   var PALETTES = [
-    {name:'Plum', bg:'var(--plum-bg)', fg:'var(--plum-fg)'},
-    {name:'Tide', bg:'var(--tide-bg)', fg:'var(--tide-fg)'},
-    {name:'Sand', bg:'var(--sand-bg)', fg:'var(--sand-fg)'},
-    {name:'Rust', bg:'var(--rust-bg)', fg:'var(--rust-fg)'},
-    {name:'Moss', bg:'var(--moss-bg)', fg:'var(--moss-fg)'},
-    {name:'Slate', bg:'var(--slate-bg)', fg:'var(--slate-fg)'}
+    {bg:'var(--plum-bg)', fg:'var(--plum-fg)'},
+    {bg:'var(--tide-bg)', fg:'var(--tide-fg)'},
+    {bg:'var(--sand-bg)', fg:'var(--sand-fg)'},
+    {bg:'var(--rust-bg)', fg:'var(--rust-fg)'},
+    {bg:'var(--moss-bg)', fg:'var(--moss-fg)'},
+    {bg:'var(--slate-bg)', fg:'var(--slate-fg)'}
   ];
 
   var state = { playerCount:4, startLife:40, players:[] };
@@ -273,7 +265,7 @@
     for (var i=0;i<state.playerCount;i++){
       var pal = PALETTES[i % PALETTES.length];
       state.players.push({
-        id:i, name:pal.name, life:state.startLife,
+        id:i, life:state.startLife,
         bg:pal.bg, fg:pal.fg, cmdDamage:{}, poison:0
       });
     }
@@ -332,18 +324,10 @@
     var inner = document.createElement('div');
     inner.className = 'cell-inner';
 
-    var topBar = document.createElement('div');
-    topBar.className = 'top-bar';
-    var nameDisplay = document.createElement('div');
-    nameDisplay.className = 'player-name';
-    nameDisplay.textContent = p.name;
-    topBar.appendChild(nameDisplay);
-
     var life = document.createElement('div');
     life.className = 'life-display';
     life.textContent = p.life;
 
-    inner.appendChild(topBar);
     inner.appendChild(life);
 
     var cmdBadge = document.createElement('div');
@@ -409,9 +393,6 @@
     lifeEl.textContent = p.life;
     sizeLifeText(lifeEl);
 
-    var nameEl = cell.querySelector('.player-name');
-    if (nameEl) nameEl.textContent = p.name;
-
     var cmdBadge = cell.querySelector('.badge-cmd');
     if (cmdBadge){
       var maxDmg = 0;
@@ -448,16 +429,37 @@
   window.addEventListener('resize', sizeAllLifeText);
 
   // ---------- Menu (poison + commander damage + new game) ----------
-  function buildStepperRow(label, value, isLethal, onMinus, onPlus, nameForId, namePrefix){
+
+  // Mini seating-chart icon standing in for a name: a small replica of the
+  // current player-count layout (same top/bottom split as the real board)
+  // with this player's seat filled in and rotated to match their actual
+  // orientation, so "which row is this" reads the same way the table does.
+  function buildSeatGlyph(pid){
+    var n = state.players.length;
+    var topCount = Math.ceil(n/2);
+    var glyph = document.createElement('div');
+    glyph.className = 'seat-glyph' + (pid < topCount ? ' rot180' : '');
+    var topRow = document.createElement('div');
+    topRow.className = 'seat-row';
+    var bottomRow = document.createElement('div');
+    bottomRow.className = 'seat-row';
+    for (var i=0;i<n;i++){
+      var seat = document.createElement('div');
+      seat.className = 'seat-cell';
+      if (i === pid) seat.style.background = state.players[i].bg;
+      (i < topCount ? topRow : bottomRow).appendChild(seat);
+    }
+    glyph.appendChild(topRow);
+    glyph.appendChild(bottomRow);
+    return glyph;
+  }
+
+  function buildStepperRow(idNode, value, isLethal, onMinus, onPlus){
     var row = document.createElement('div');
     row.className = 'cmd-row';
-    var nameSpan = document.createElement('div');
-    nameSpan.className = 'opp-name';
-    nameSpan.textContent = label;
-    if (nameForId !== undefined){
-      nameSpan.dataset.nameFor = nameForId;
-      nameSpan.dataset.namePrefix = namePrefix || '';
-    }
+    var idWrap = document.createElement('div');
+    idWrap.className = 'row-id';
+    idWrap.appendChild(idNode);
 
     var stepper = document.createElement('div');
     stepper.className = 'stepper';
@@ -484,16 +486,9 @@
     stepper.appendChild(minusBtn);
     stepper.appendChild(valSpan);
     stepper.appendChild(plusBtn);
-    row.appendChild(nameSpan);
+    row.appendChild(idWrap);
     row.appendChild(stepper);
     return row;
-  }
-
-  function syncNameDisplays(sheet, pid, newName){
-    sheet.querySelectorAll('[data-name-for="'+pid+'"]').forEach(function(el){
-      var prefix = el.dataset.namePrefix || '';
-      el.textContent = prefix + newName;
-    });
   }
 
   function openMenu(){
@@ -502,28 +497,6 @@
     var sheet = document.createElement('div');
     sheet.className = 'sheet';
     sheet.innerHTML = '<h2>Menu</h2>';
-
-    // ---- Player names ----
-    var namesTitle = document.createElement('div');
-    namesTitle.className = 'menu-section-title';
-    namesTitle.textContent = 'Player names';
-    sheet.appendChild(namesTitle);
-
-    state.players.forEach(function(p){
-      var row = document.createElement('div');
-      row.className = 'name-edit-row';
-      var input = document.createElement('input');
-      input.className = 'name-edit-input';
-      input.maxLength = 16;
-      input.value = p.name;
-      input.addEventListener('input', function(){
-        p.name = input.value || p.name;
-        refreshCell(p.id);
-        syncNameDisplays(sheet, p.id, p.name);
-      });
-      row.appendChild(input);
-      sheet.appendChild(row);
-    });
 
     // ---- Commander damage (one collapsible row per player) ----
     var cmdTitle = document.createElement('div');
@@ -537,13 +510,9 @@
 
       var left = document.createElement('div');
       left.className = 'ptoggle-left';
-      var nameSpan = document.createElement('span');
-      nameSpan.className = 'ptoggle-name';
-      nameSpan.textContent = p.name;
-      nameSpan.dataset.nameFor = p.id;
       var summarySpan = document.createElement('span');
       summarySpan.className = 'ptoggle-summary';
-      left.appendChild(nameSpan);
+      left.appendChild(buildSeatGlyph(p.id));
       left.appendChild(summarySpan);
 
       var chevron = document.createElement('span');
@@ -566,7 +535,7 @@
       state.players.forEach(function(opp){
         if (opp.id === p.id) return;
         body.appendChild(buildStepperRow(
-          'from ' + opp.name, p.cmdDamage[opp.id] || 0,
+          buildSeatGlyph(opp.id), p.cmdDamage[opp.id] || 0,
           function(v){ return v >= 21; },
           function(){
             var cur = p.cmdDamage[opp.id] || 0;
@@ -584,8 +553,7 @@
             refreshCell(p.id);
             updateSummary();
             return p.cmdDamage[opp.id];
-          },
-          opp.id, 'from '
+          }
         ));
       });
 
@@ -631,11 +599,10 @@
 
     state.players.forEach(function(p){
       poisonBody.appendChild(buildStepperRow(
-        p.name, p.poison,
+        buildSeatGlyph(p.id), p.poison,
         function(v){ return v >= POISON_LETHAL; },
         function(){ if (p.poison<=0) return undefined; p.poison -= 1; refreshCell(p.id); updatePoisonSummary(); return p.poison; },
-        function(){ p.poison += 1; refreshCell(p.id); updatePoisonSummary(); return p.poison; },
-        p.id
+        function(){ p.poison += 1; refreshCell(p.id); updatePoisonSummary(); return p.poison; }
       ));
     });
 
