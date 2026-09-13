@@ -84,11 +84,11 @@
     display:flex; align-items:center; justify-content:center; gap:6px;
     pointer-events:auto; z-index:2;
   }
-  .name-input{
-    background:transparent; border:none; text-align:center; font-size:13px; font-weight:600;
+  .player-name{
+    text-align:center; font-size:13px; font-weight:600;
     color:inherit; opacity:0.75; width:120px; padding:2px; font-family:inherit;
+    overflow:hidden; text-overflow:ellipsis; white-space:nowrap;
   }
-  .name-input:focus{ outline:none; opacity:1; }
 
   .life-display{
     font-family:'SF Mono','Roboto Mono',Menlo,Consolas,monospace;
@@ -334,13 +334,10 @@
 
     var topBar = document.createElement('div');
     topBar.className = 'top-bar';
-    var nameInput = document.createElement('input');
-    nameInput.className = 'name-input';
-    nameInput.value = p.name;
-    nameInput.maxLength = 16;
-    nameInput.addEventListener('change', function(){ p.name = nameInput.value || p.name; });
-    nameInput.addEventListener('click', function(e){ e.stopPropagation(); });
-    topBar.appendChild(nameInput);
+    var nameDisplay = document.createElement('div');
+    nameDisplay.className = 'player-name';
+    nameDisplay.textContent = p.name;
+    topBar.appendChild(nameDisplay);
 
     var life = document.createElement('div');
     life.className = 'life-display';
@@ -412,10 +409,8 @@
     lifeEl.textContent = p.life;
     sizeLifeText(lifeEl);
 
-    var nameEl = cell.querySelector('.name-input');
-    if (nameEl && document.activeElement !== nameEl){
-      nameEl.value = p.name;
-    }
+    var nameEl = cell.querySelector('.player-name');
+    if (nameEl) nameEl.textContent = p.name;
 
     var cmdBadge = cell.querySelector('.badge-cmd');
     if (cmdBadge){
