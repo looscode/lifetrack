@@ -1,4 +1,4 @@
-const CACHE_NAME = 'life-counter-v8';
+const CACHE_NAME = 'lifetrack-v9';
 const ASSETS = [
   './',
   './index.html',

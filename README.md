@@ -1,4 +1,4 @@
-# Life Counter
+# LifeTrack
 
 A minimalist life counter for Magic: The Gathering, with Commander damage
 and poison-counter tracking built in. Pure HTML/CSS/JS, zero dependencies,

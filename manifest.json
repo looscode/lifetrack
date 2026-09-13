@@ -1,6 +1,6 @@
 {
-  "name": "Life Counter",
-  "short_name": "Life",
+  "name": "LifeTrack",
+  "short_name": "LifeTrack",
   "description": "Minimalist life counter with Commander damage tracking",
   "start_url": "./index.html",
   "scope": "./",
