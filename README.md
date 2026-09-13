@@ -45,7 +45,7 @@ plain `file://` path.
 This folder is a git repo, ready to open as a project:
 
 ```
-cd life-counter-pwa
+cd lifetrack
 claude
 ```
 
@@ -54,8 +54,8 @@ A few things worth knowing before making changes:
 - **Bump the service worker cache** (`CACHE_NAME` at the top of `sw.js`)
   whenever `index.html`, `manifest.json`, or the icons change. The cache-first
   strategy means a phone that already installed the app won't see updates
-  otherwise. Just increment the version suffix, e.g. `life-counter-v8` →
-  `life-counter-v9`.
+  otherwise. Just increment the version suffix, e.g. `lifetrack-v9` →
+  `lifetrack-v10`.
 - **Everything lives in one `index.html`** by design — no bundler, no
   framework, no npm install. If a change grows the file a lot, it's worth
   asking whether it should stay that way, but for a tool this size the
