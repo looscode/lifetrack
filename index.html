@@ -1,0 +1,702 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no, viewport-fit=cover">
+<title>Life Counter</title>
+
+<!-- PWA / installability -->
+<link rel="manifest" href="manifest.json">
+<meta name="theme-color" content="#0f1115">
+<meta name="mobile-web-app-capable" content="yes">
+
+<!-- iOS: makes "Add to Home Screen" open full-screen with no browser chrome -->
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<meta name="apple-mobile-web-app-title" content="Life">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<style>
+  :root{
+    --bg:#0f1115;
+    --line:#0f1115;
+    --sand-bg:#eae2d0;   --sand-fg:#1c1710;
+    --tide-bg:#3f6f8f;   --tide-fg:#f3f8fb;
+    --plum-bg:#57394c;   --plum-fg:#f2e9ef;
+    --rust-bg:#b2502e;   --rust-fg:#fff8f2;
+    --moss-bg:#3e6349;   --moss-fg:#eef7ef;
+    --slate-bg:#576273;  --slate-fg:#f5f7f9;
+  }
+  *{box-sizing:border-box; -webkit-tap-highlight-color:transparent;}
+  html,body{
+    margin:0; padding:0; height:100%; overflow:hidden;
+    background:var(--bg);
+    font-family:-apple-system,BlinkMacSystemFont,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+    touch-action:manipulation;
+  }
+  #app{ height:100dvh; width:100vw; position:relative; }
+  .hidden{ display:none !important; }
+
+  /* ---------- Setup screen ---------- */
+  #setup{
+    height:100%; width:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    gap:28px; padding:24px; color:#e7e5e0;
+  }
+  #setup h1{
+    font-size:clamp(22px,6vw,30px); font-weight:600; letter-spacing:-0.01em;
+    margin:0 0 4px 0; color:#f4f2ee;
+  }
+  #setup .sub{ margin-top:-20px; font-size:14px; color:#8b8f99; }
+  .field{ display:flex; flex-direction:column; gap:10px; align-items:center; width:100%; max-width:420px; }
+  .field-label{ font-size:13px; color:#9a9ea7; }
+  .choice-row{ display:flex; gap:8px; flex-wrap:wrap; justify-content:center; }
+  .choice-btn{
+    min-width:52px; padding:12px 16px; border-radius:10px; border:1.5px solid #2a2d34;
+    background:#181a1f; color:#e7e5e0; font-size:16px; font-weight:600; cursor:pointer;
+  }
+  .choice-btn.active{ border-color:#e7e5e0; background:#24262d; }
+  #startBtn{
+    margin-top:8px; padding:16px 40px; border-radius:12px; border:none;
+    background:#e7e5e0; color:#14161a; font-size:17px; font-weight:700; cursor:pointer;
+  }
+  #startBtn:active{ transform:scale(0.97); }
+
+  /* ---------- Game screen ---------- */
+  #game{ height:100%; width:100%; display:grid; }
+  .row{ display:grid; min-height:0; min-width:0; }
+  .player-cell{
+    position:relative; overflow:hidden; border:1px solid var(--line);
+    display:flex; align-items:stretch; justify-content:stretch;
+  }
+  .cell-inner{
+    position:relative; width:100%; height:100%;
+    display:flex; flex-direction:column; align-items:center; justify-content:center;
+    pointer-events:none;
+  }
+  .tap-zone{ position:absolute; top:0; bottom:0; width:50%; pointer-events:auto; }
+  .tap-minus{ left:0; }
+  .tap-plus{ right:0; }
+  .tap-zone.flash-plus{ background:rgba(255,255,255,0.10); }
+  .tap-zone.flash-minus{ background:rgba(0,0,0,0.12); }
+
+  .top-bar{
+    position:absolute; top:8px; left:0; right:0;
+    display:flex; align-items:center; justify-content:center; gap:6px;
+    pointer-events:auto; z-index:2;
+  }
+  .name-input{
+    background:transparent; border:none; text-align:center; font-size:13px; font-weight:600;
+    color:inherit; opacity:0.75; width:120px; padding:2px; font-family:inherit;
+  }
+  .name-input:focus{ outline:none; opacity:1; }
+
+  .life-display{
+    font-family:'SF Mono','Roboto Mono',Menlo,Consolas,monospace;
+    font-variant-numeric:tabular-nums;
+    font-weight:700; line-height:1; z-index:1; pointer-events:none;
+    letter-spacing:-0.02em;
+  }
+
+  .cell-badge{
+    position:absolute; bottom:8px; z-index:2; font-size:12px; opacity:0.65;
+    pointer-events:none; font-weight:600;
+  }
+  .badge-cmd{ left:8px; }
+  .badge-poison{ right:8px; }
+  .badge-cmd.danger{ color:#ffb4a3; opacity:1; }
+  .badge-poison.danger{ color:#b9f0a0; opacity:1; }
+
+  .row.rot180 .cell-inner, .row.rot180 .top-bar, .row.rot180 .cell-badge{
+    transform: rotate(180deg);
+  }
+
+  /* corner controls */
+  #menuBtn{
+    position:fixed; top:50%; left:50%; transform:translate(-50%,-50%); z-index:10;
+    width:34px; height:34px; border-radius:50%; border:1.5px solid #3a3d44;
+    background:rgba(20,22,26,0.85); color:#cfd2d8; cursor:pointer;
+    display:flex; align-items:center; justify-content:center; padding:0;
+  }
+  #menuBtn svg{ width:16px; height:16px; display:block; }
+
+  /* ---------- Overlays ---------- */
+  .overlay{
+    position:fixed; inset:0; background:rgba(8,9,11,0.72); z-index:50;
+    display:flex; align-items:center; justify-content:center; padding:20px;
+  }
+  .sheet{
+    background:#181a1f; border:1px solid #2a2d34; border-radius:16px; padding:20px;
+    width:100%; max-width:380px; color:#e7e5e0; max-height:80vh; overflow-y:auto;
+  }
+  .sheet h2{ margin:0 0 4px 0; font-size:18px; font-weight:700; }
+  .sheet .sheet-sub{ margin:0 0 16px 0; font-size:13px; color:#8b8f99; }
+  .menu-section-title{
+    margin:20px 0 8px 0; font-size:12px; font-weight:700; color:#9a9ea7;
+    padding-top:12px; border-top:1px solid #24262d;
+  }
+  .menu-section-title:first-of-type{ border-top:none; padding-top:0; }
+  .menu-player-toggle{
+    width:100%; display:flex; align-items:center; justify-content:space-between; gap:10px;
+    background:none; border:none; padding:10px 0; margin-top:4px; cursor:pointer;
+    color:#e7e5e0; font-family:inherit; text-align:left;
+  }
+  .menu-player-toggle:first-of-type{ margin-top:0; }
+  .menu-player-toggle .ptoggle-left{ display:flex; align-items:center; gap:8px; min-width:0; }
+  .menu-player-toggle .ptoggle-name{ font-size:14px; font-weight:700; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .menu-player-toggle .ptoggle-summary{ font-size:12px; color:#9a9ea7; font-weight:600; }
+  .menu-player-toggle .ptoggle-summary.danger{ color:#ff8a75; }
+  .menu-player-toggle .chevron{
+    width:9px; height:9px; border-right:1.5px solid #6b6f78; border-bottom:1.5px solid #6b6f78;
+    transform:rotate(-45deg); transition:transform .15s ease; flex:0 0 auto;
+  }
+  .menu-player-toggle.expanded .chevron{ transform:rotate(45deg); }
+  .menu-player-body{
+    overflow:hidden; max-height:0; transition:max-height .18s ease;
+  }
+  .menu-player-body.expanded{ max-height:600px; }
+  .menu-new-game{
+    width:100%; padding:12px; border-radius:10px; border:1.5px solid #33363d;
+    background:#202227; color:#e7e5e0; font-size:15px; font-weight:600; cursor:pointer;
+    margin-top:20px;
+  }
+  .name-edit-row{ padding:5px 0; }
+  .name-edit-input{
+    width:100%; padding:10px 12px; border-radius:8px; border:1.5px solid #2a2d34;
+    background:#111318; color:#e7e5e0; font-size:15px; font-family:inherit;
+  }
+  .name-edit-input:focus{ outline:none; border-color:#565b66; }
+  .cmd-row{
+    display:flex; align-items:center; justify-content:space-between; gap:12px;
+    padding:10px 0; border-bottom:1px solid #24262d;
+  }
+  .cmd-row:last-child{ border-bottom:none; }
+  .cmd-row .opp-name{ font-size:15px; font-weight:600; flex:1; min-width:0; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .stepper{ display:flex; align-items:center; gap:10px; }
+  .stepper button{
+    width:32px; height:32px; border-radius:8px; border:1.5px solid #33363d; background:#202227;
+    color:#e7e5e0; font-size:18px; cursor:pointer; font-weight:700;
+  }
+  .stepper .val{ min-width:22px; text-align:center; font-family:'SF Mono',Menlo,monospace; font-weight:700; font-size:16px; }
+  .stepper .val.lethal{ color:#ff8a75; }
+  .sheet-close{
+    margin-top:16px; width:100%; padding:12px; border-radius:10px; border:none;
+    background:#24262d; color:#e7e5e0; font-size:15px; font-weight:600; cursor:pointer;
+  }
+  .confirm-actions{ display:flex; gap:10px; margin-top:16px; }
+  .confirm-actions button{ flex:1; padding:12px; border-radius:10px; border:none; font-size:15px; font-weight:600; cursor:pointer; }
+  .confirm-actions .danger-btn{ background:#b2502e; color:#fff8f2; }
+  .confirm-actions .cancel-btn{ background:#24262d; color:#e7e5e0; }
+
+  @media (prefers-reduced-motion: reduce){
+    *{ transition:none !important; }
+  }
+</style>
+</head>
+<body>
+<div id="app">
+
+  <div id="setup">
+    <h1>Life Counter</h1>
+
+    <div class="field">
+      <div class="field-label">Players</div>
+      <div class="choice-row" id="playerCountRow"></div>
+    </div>
+
+    <div class="field">
+      <div class="field-label">Starting life</div>
+      <div class="choice-row" id="startLifeRow"></div>
+    </div>
+
+    <button id="startBtn">Start game</button>
+  </div>
+
+  <div id="game" class="hidden"></div>
+  <button id="menuBtn" class="hidden" title="Menu">
+    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+      <line x1="4" y1="7" x2="20" y2="7"/>
+      <line x1="4" y1="12" x2="20" y2="12"/>
+      <line x1="4" y1="17" x2="20" y2="17"/>
+    </svg>
+  </button>
+
+</div>
+
+<script>
+(function(){
+  var PALETTES = [
+    {bg:'var(--sand-bg)', fg:'var(--sand-fg)'},
+    {bg:'var(--tide-bg)', fg:'var(--tide-fg)'},
+    {bg:'var(--plum-bg)', fg:'var(--plum-fg)'},
+    {bg:'var(--rust-bg)', fg:'var(--rust-fg)'},
+    {bg:'var(--moss-bg)', fg:'var(--moss-fg)'},
+    {bg:'var(--slate-bg)', fg:'var(--slate-fg)'}
+  ];
+
+  var state = { playerCount:4, startLife:40, players:[] };
+  var POISON_LETHAL = 10;
+
+  var setupEl = document.getElementById('setup');
+  var gameEl = document.getElementById('game');
+  var menuBtn = document.getElementById('menuBtn');
+  var playerCountRow = document.getElementById('playerCountRow');
+  var startLifeRow = document.getElementById('startLifeRow');
+
+  [2,3,4,5,6].forEach(function(n){
+    var b = document.createElement('button');
+    b.className = 'choice-btn' + (n===state.playerCount ? ' active' : '');
+    b.textContent = n;
+    b.addEventListener('click', function(){
+      state.playerCount = n;
+      Array.from(playerCountRow.children).forEach(function(c){ c.classList.remove('active'); });
+      b.classList.add('active');
+    });
+    playerCountRow.appendChild(b);
+  });
+
+  [20,30,40].forEach(function(n){
+    var b = document.createElement('button');
+    b.className = 'choice-btn' + (n===state.startLife ? ' active' : '');
+    b.textContent = n;
+    b.addEventListener('click', function(){
+      state.startLife = n;
+      Array.from(startLifeRow.children).forEach(function(c){ c.classList.remove('active'); });
+      b.classList.add('active');
+    });
+    startLifeRow.appendChild(b);
+  });
+
+  document.getElementById('startBtn').addEventListener('click', startGame);
+
+  function startGame(){
+    state.players = [];
+    for (var i=0;i<state.playerCount;i++){
+      var pal = PALETTES[i % PALETTES.length];
+      state.players.push({
+        id:i, name:'Player ' + (i+1), life:state.startLife,
+        bg:pal.bg, fg:pal.fg, cmdDamage:{}, poison:0
+      });
+    }
+    setupEl.classList.add('hidden');
+    gameEl.classList.remove('hidden');
+    menuBtn.classList.remove('hidden');
+    renderGame();
+  }
+
+  function renderGame(){
+    gameEl.innerHTML = '';
+    var n = state.players.length;
+    var topCount = Math.ceil(n/2);
+    var bottomCount = n - topCount;
+    gameEl.style.gridTemplateRows = bottomCount > 0 ? '1fr 1fr' : '1fr';
+
+    var rows = [];
+    rows.push({ ids: state.players.slice(0, topCount).map(function(p){return p.id;}), rotate:true });
+    if (bottomCount > 0){
+      rows.push({ ids: state.players.slice(topCount).map(function(p){return p.id;}), rotate:false });
+    }
+
+    rows.forEach(function(rowDef){
+      var row = document.createElement('div');
+      row.className = 'row' + (rowDef.rotate ? ' rot180' : '');
+      row.style.gridTemplateColumns = 'repeat(' + rowDef.ids.length + ', 1fr)';
+      rowDef.ids.forEach(function(pid){
+        row.appendChild(buildCell(state.players[pid]));
+      });
+      gameEl.appendChild(row);
+    });
+
+    sizeAllLifeText();
+  }
+
+  function buildCell(p){
+    var cell = document.createElement('div');
+    cell.className = 'player-cell';
+    cell.style.background = p.bg;
+    cell.style.color = p.fg;
+    cell.dataset.pid = p.id;
+
+    var inner = document.createElement('div');
+    inner.className = 'cell-inner';
+
+    var topBar = document.createElement('div');
+    topBar.className = 'top-bar';
+    var nameInput = document.createElement('input');
+    nameInput.className = 'name-input';
+    nameInput.value = p.name;
+    nameInput.maxLength = 16;
+    nameInput.addEventListener('change', function(){ p.name = nameInput.value || p.name; });
+    nameInput.addEventListener('click', function(e){ e.stopPropagation(); });
+    topBar.appendChild(nameInput);
+
+    var life = document.createElement('div');
+    life.className = 'life-display';
+    life.textContent = p.life;
+
+    inner.appendChild(topBar);
+    inner.appendChild(life);
+
+    var cmdBadge = document.createElement('div');
+    cmdBadge.className = 'cell-badge badge-cmd';
+    inner.appendChild(cmdBadge);
+
+    var poisonBadge = document.createElement('div');
+    poisonBadge.className = 'cell-badge badge-poison';
+    inner.appendChild(poisonBadge);
+
+    var minus = document.createElement('div');
+    minus.className = 'tap-zone tap-minus';
+    var plus = document.createElement('div');
+    plus.className = 'tap-zone tap-plus';
+
+    attachHold(minus, function(){ changeLife(p.id, -1); flash(minus,'flash-minus'); });
+    attachHold(plus, function(){ changeLife(p.id, 1); flash(plus,'flash-plus'); });
+
+    inner.appendChild(minus);
+    inner.appendChild(plus);
+    cell.appendChild(inner);
+    return cell;
+  }
+
+  function flash(el, cls){
+    el.classList.add(cls);
+    setTimeout(function(){ el.classList.remove(cls); }, 120);
+  }
+
+  // tap = single step, holding repeats faster after a short delay
+  function attachHold(el, fn){
+    var timer=null, interval=null, fired=false;
+    function start(e){
+      e.preventDefault();
+      fired = false;
+      fn(); fired = true;
+      timer = setTimeout(function(){
+        interval = setInterval(fn, 110);
+      }, 500);
+    }
+    function stop(){
+      clearTimeout(timer); clearInterval(interval);
+      timer=null; interval=null;
+    }
+    el.addEventListener('pointerdown', start);
+    el.addEventListener('pointerup', stop);
+    el.addEventListener('pointerleave', stop);
+    el.addEventListener('pointercancel', stop);
+  }
+
+  function changeLife(pid, delta){
+    var p = state.players[pid];
+    p.life += delta;
+    refreshCell(pid);
+  }
+
+  function refreshCell(pid){
+    var p = state.players[pid];
+    var cell = gameEl.querySelector('.player-cell[data-pid="'+pid+'"]');
+    if (!cell) return;
+
+    var lifeEl = cell.querySelector('.life-display');
+    lifeEl.textContent = p.life;
+    sizeLifeText(lifeEl);
+
+    var nameEl = cell.querySelector('.name-input');
+    if (nameEl && document.activeElement !== nameEl){
+      nameEl.value = p.name;
+    }
+
+    var cmdBadge = cell.querySelector('.badge-cmd');
+    if (cmdBadge){
+      var maxDmg = 0;
+      Object.keys(p.cmdDamage).forEach(function(k){ maxDmg = Math.max(maxDmg, p.cmdDamage[k]); });
+      if (maxDmg > 0){
+        cmdBadge.textContent = '⚔ ' + maxDmg;
+        cmdBadge.classList.toggle('danger', maxDmg >= 21);
+      } else {
+        cmdBadge.textContent = '';
+        cmdBadge.classList.remove('danger');
+      }
+    }
+
+    var poisonBadge = cell.querySelector('.badge-poison');
+    if (poisonBadge){
+      if (p.poison > 0){
+        poisonBadge.textContent = '☠ ' + p.poison;
+        poisonBadge.classList.toggle('danger', p.poison >= POISON_LETHAL);
+      } else {
+        poisonBadge.textContent = '';
+        poisonBadge.classList.remove('danger');
+      }
+    }
+  }
+
+  function sizeLifeText(el){
+    var cellHeight = el.closest('.player-cell').clientHeight;
+    var size = Math.max(36, Math.min(cellHeight * 0.42, 140));
+    el.style.fontSize = size + 'px';
+  }
+  function sizeAllLifeText(){
+    document.querySelectorAll('.life-display').forEach(sizeLifeText);
+  }
+  window.addEventListener('resize', sizeAllLifeText);
+
+  // ---------- Menu (poison + commander damage + new game) ----------
+  function buildStepperRow(label, value, isLethal, onMinus, onPlus, nameForId, namePrefix){
+    var row = document.createElement('div');
+    row.className = 'cmd-row';
+    var nameSpan = document.createElement('div');
+    nameSpan.className = 'opp-name';
+    nameSpan.textContent = label;
+    if (nameForId !== undefined){
+      nameSpan.dataset.nameFor = nameForId;
+      nameSpan.dataset.namePrefix = namePrefix || '';
+    }
+
+    var stepper = document.createElement('div');
+    stepper.className = 'stepper';
+    var minusBtn = document.createElement('button');
+    minusBtn.textContent = '–';
+    var valSpan = document.createElement('span');
+    valSpan.className = 'val' + (isLethal(value) ? ' lethal' : '');
+    valSpan.textContent = value;
+    var plusBtn = document.createElement('button');
+    plusBtn.textContent = '+';
+
+    minusBtn.addEventListener('click', function(){
+      var next = onMinus();
+      if (next === undefined) return;
+      valSpan.textContent = next;
+      valSpan.classList.toggle('lethal', isLethal(next));
+    });
+    plusBtn.addEventListener('click', function(){
+      var next = onPlus();
+      valSpan.textContent = next;
+      valSpan.classList.toggle('lethal', isLethal(next));
+    });
+
+    stepper.appendChild(minusBtn);
+    stepper.appendChild(valSpan);
+    stepper.appendChild(plusBtn);
+    row.appendChild(nameSpan);
+    row.appendChild(stepper);
+    return row;
+  }
+
+  function syncNameDisplays(sheet, pid, newName){
+    sheet.querySelectorAll('[data-name-for="'+pid+'"]').forEach(function(el){
+      var prefix = el.dataset.namePrefix || '';
+      el.textContent = prefix + newName;
+    });
+  }
+
+  function openMenu(){
+    var overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    var sheet = document.createElement('div');
+    sheet.className = 'sheet';
+    sheet.innerHTML = '<h2>Menu</h2>';
+
+    // ---- Player names ----
+    var namesTitle = document.createElement('div');
+    namesTitle.className = 'menu-section-title';
+    namesTitle.textContent = 'Player names';
+    sheet.appendChild(namesTitle);
+
+    state.players.forEach(function(p){
+      var row = document.createElement('div');
+      row.className = 'name-edit-row';
+      var input = document.createElement('input');
+      input.className = 'name-edit-input';
+      input.maxLength = 16;
+      input.value = p.name;
+      input.addEventListener('input', function(){
+        p.name = input.value || p.name;
+        refreshCell(p.id);
+        syncNameDisplays(sheet, p.id, p.name);
+      });
+      row.appendChild(input);
+      sheet.appendChild(row);
+    });
+
+    // ---- Commander damage (one collapsible row per player) ----
+    var cmdTitle = document.createElement('div');
+    cmdTitle.className = 'menu-section-title';
+    cmdTitle.textContent = 'Commander damage';
+    sheet.appendChild(cmdTitle);
+
+    state.players.forEach(function(p){
+      var toggle = document.createElement('button');
+      toggle.className = 'menu-player-toggle';
+
+      var left = document.createElement('div');
+      left.className = 'ptoggle-left';
+      var nameSpan = document.createElement('span');
+      nameSpan.className = 'ptoggle-name';
+      nameSpan.textContent = p.name;
+      nameSpan.dataset.nameFor = p.id;
+      var summarySpan = document.createElement('span');
+      summarySpan.className = 'ptoggle-summary';
+      left.appendChild(nameSpan);
+      left.appendChild(summarySpan);
+
+      var chevron = document.createElement('span');
+      chevron.className = 'chevron';
+
+      toggle.appendChild(left);
+      toggle.appendChild(chevron);
+
+      var body = document.createElement('div');
+      body.className = 'menu-player-body';
+
+      function updateSummary(){
+        var max = 0;
+        Object.keys(p.cmdDamage).forEach(function(k){ max = Math.max(max, p.cmdDamage[k]); });
+        summarySpan.textContent = max > 0 ? max + ' dmg' : 'none';
+        summarySpan.classList.toggle('danger', max >= 21);
+      }
+      updateSummary();
+
+      state.players.forEach(function(opp){
+        if (opp.id === p.id) return;
+        body.appendChild(buildStepperRow(
+          'from ' + opp.name, p.cmdDamage[opp.id] || 0,
+          function(v){ return v >= 21; },
+          function(){
+            var cur = p.cmdDamage[opp.id] || 0;
+            if (cur<=0) return undefined;
+            p.cmdDamage[opp.id] = cur - 1;
+            p.life += 1;
+            refreshCell(p.id);
+            updateSummary();
+            return p.cmdDamage[opp.id];
+          },
+          function(){
+            var cur = p.cmdDamage[opp.id] || 0;
+            p.cmdDamage[opp.id] = cur + 1;
+            p.life -= 1;
+            refreshCell(p.id);
+            updateSummary();
+            return p.cmdDamage[opp.id];
+          },
+          opp.id, 'from '
+        ));
+      });
+
+      toggle.addEventListener('click', function(){
+        var isOpen = body.classList.toggle('expanded');
+        toggle.classList.toggle('expanded', isOpen);
+      });
+
+      sheet.appendChild(toggle);
+      sheet.appendChild(body);
+    });
+
+    // ---- Poison counters (a final collapsible entry, same style as above) ----
+    var poisonToggle = document.createElement('button');
+    poisonToggle.className = 'menu-player-toggle';
+
+    var poisonLeft = document.createElement('div');
+    poisonLeft.className = 'ptoggle-left';
+    var poisonNameSpan = document.createElement('span');
+    poisonNameSpan.className = 'ptoggle-name';
+    poisonNameSpan.textContent = 'Poison counters';
+    var poisonSummarySpan = document.createElement('span');
+    poisonSummarySpan.className = 'ptoggle-summary';
+    poisonLeft.appendChild(poisonNameSpan);
+    poisonLeft.appendChild(poisonSummarySpan);
+
+    var poisonChevron = document.createElement('span');
+    poisonChevron.className = 'chevron';
+
+    poisonToggle.appendChild(poisonLeft);
+    poisonToggle.appendChild(poisonChevron);
+
+    var poisonBody = document.createElement('div');
+    poisonBody.className = 'menu-player-body';
+
+    function updatePoisonSummary(){
+      var max = 0;
+      state.players.forEach(function(p){ max = Math.max(max, p.poison); });
+      poisonSummarySpan.textContent = max > 0 ? max + ' max' : 'none';
+      poisonSummarySpan.classList.toggle('danger', max >= POISON_LETHAL);
+    }
+    updatePoisonSummary();
+
+    state.players.forEach(function(p){
+      poisonBody.appendChild(buildStepperRow(
+        p.name, p.poison,
+        function(v){ return v >= POISON_LETHAL; },
+        function(){ if (p.poison<=0) return undefined; p.poison -= 1; refreshCell(p.id); updatePoisonSummary(); return p.poison; },
+        function(){ p.poison += 1; refreshCell(p.id); updatePoisonSummary(); return p.poison; },
+        p.id
+      ));
+    });
+
+    poisonToggle.addEventListener('click', function(){
+      var isOpen = poisonBody.classList.toggle('expanded');
+      poisonToggle.classList.toggle('expanded', isOpen);
+    });
+
+    sheet.appendChild(poisonToggle);
+    sheet.appendChild(poisonBody);
+
+    var newGameBtn = document.createElement('button');
+    newGameBtn.className = 'menu-new-game';
+    newGameBtn.textContent = 'New game';
+    newGameBtn.addEventListener('click', function(){
+      overlay.remove();
+      confirmNewGame();
+    });
+    sheet.appendChild(newGameBtn);
+
+    var closeBtn = document.createElement('button');
+    closeBtn.className = 'sheet-close';
+    closeBtn.textContent = 'Done';
+    closeBtn.addEventListener('click', function(){ overlay.remove(); });
+    sheet.appendChild(closeBtn);
+
+    overlay.appendChild(sheet);
+    overlay.addEventListener('click', function(e){ if (e.target === overlay) overlay.remove(); });
+    document.getElementById('app').appendChild(overlay);
+  }
+
+  menuBtn.addEventListener('click', openMenu);
+
+  // ---------- New game ----------
+  function confirmNewGame(){
+    var overlay = document.createElement('div');
+    overlay.className = 'overlay';
+    var sheet = document.createElement('div');
+    sheet.className = 'sheet';
+    sheet.innerHTML = '<h2>Start a new game?</h2><p class="sheet-sub">This clears all current life totals, poison, and commander damage.</p>';
+    var actions = document.createElement('div');
+    actions.className = 'confirm-actions';
+    var cancel = document.createElement('button');
+    cancel.className = 'cancel-btn';
+    cancel.textContent = 'Cancel';
+    cancel.addEventListener('click', function(){ overlay.remove(); });
+    var confirmBtn = document.createElement('button');
+    confirmBtn.className = 'danger-btn';
+    confirmBtn.textContent = 'New game';
+    confirmBtn.addEventListener('click', function(){
+      overlay.remove();
+      gameEl.classList.add('hidden');
+      menuBtn.classList.add('hidden');
+      setupEl.classList.remove('hidden');
+    });
+    actions.appendChild(cancel);
+    actions.appendChild(confirmBtn);
+    sheet.appendChild(actions);
+    overlay.appendChild(sheet);
+    document.getElementById('app').appendChild(overlay);
+  }
+
+})();
+
+if ('serviceWorker' in navigator) {
+  window.addEventListener('load', function(){
+    navigator.serviceWorker.register('sw.js').catch(function(){ /* fine if this fails, app still works */ });
+  });
+}
+</script>
+</body>
+</html>
