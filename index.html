@@ -225,12 +225,12 @@
 <script>
 (function(){
   var PALETTES = [
-    {bg:'var(--sand-bg)', fg:'var(--sand-fg)'},
-    {bg:'var(--tide-bg)', fg:'var(--tide-fg)'},
-    {bg:'var(--plum-bg)', fg:'var(--plum-fg)'},
-    {bg:'var(--rust-bg)', fg:'var(--rust-fg)'},
-    {bg:'var(--moss-bg)', fg:'var(--moss-fg)'},
-    {bg:'var(--slate-bg)', fg:'var(--slate-fg)'}
+    {name:'Sand', bg:'var(--sand-bg)', fg:'var(--sand-fg)'},
+    {name:'Tide', bg:'var(--tide-bg)', fg:'var(--tide-fg)'},
+    {name:'Plum', bg:'var(--plum-bg)', fg:'var(--plum-fg)'},
+    {name:'Rust', bg:'var(--rust-bg)', fg:'var(--rust-fg)'},
+    {name:'Moss', bg:'var(--moss-bg)', fg:'var(--moss-fg)'},
+    {name:'Slate', bg:'var(--slate-bg)', fg:'var(--slate-fg)'}
   ];
 
   var state = { playerCount:4, startLife:40, players:[] };
@@ -273,7 +273,7 @@
     for (var i=0;i<state.playerCount;i++){
       var pal = PALETTES[i % PALETTES.length];
       state.players.push({
-        id:i, name:'Player ' + (i+1), life:state.startLife,
+        id:i, name:pal.name, life:state.startLife,
         bg:pal.bg, fg:pal.fg, cmdDamage:{}, poison:0
       });
     }
