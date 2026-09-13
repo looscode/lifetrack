@@ -15,20 +15,34 @@ icons/          home-screen icons
 
 ## Running it locally
 
-No build step, no install. Just serve the folder:
+No build step, no install. Serve the folder with whatever's on hand:
 
 ```
 python3 -m http.server 8000
 ```
 
+or, on a machine without Python/Node (this one), the bundled PowerShell
+server works the same way:
+
+```
+powershell -ExecutionPolicy Bypass -File serve.ps1 -Port 8000
+```
+
 Then open `http://localhost:8000` in a browser. Editing `index.html` and
-refreshing is the whole dev loop.
+refreshing is the whole dev loop. In Claude Code, `.claude/launch.json`
+already has this wired up as the `lifetrack` preview config.
 
 You can also just double-click `index.html` to open it directly — the app
 itself works fine that way. The only thing that needs an actual server is
 testing the "installable" / offline behavior (see below), since browsers
 only allow service workers on `http://localhost` or real HTTPS, not on a
 plain `file://` path.
+
+## Live deploy
+
+Pushing to `master` auto-deploys to GitHub Pages at
+https://looscode.github.io/lifetrack/ in about 30-60 seconds — this is the
+real install target on a phone, not the local server above.
 
 ## Installing it on your phone (no app store)
 
@@ -76,3 +90,10 @@ A few things worth knowing before making changes:
   center menu rather than cluttering each player's cell — badges on the
   cells themselves are read-only indicators, shown only once a value is
   non-zero.
+- There are no player names, and no way to set one — a deliberate choice
+  for a cleaner, minimal view. Rows in the Menu identify a player with a
+  small seating-chart glyph (a mini replica of the current layout with
+  that player's seat filled in) instead of text. The glyph is never
+  rotated, even for a top-row player whose life number is — the Menu
+  itself is always shown upright, so the glyph should match literal
+  board position, not reading orientation.
